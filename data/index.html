@@ -1,0 +1,451 @@
+<html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <style>
+        .switch {
+  position: relative;
+  display: inline-block;
+  width: 60px;
+  height: 34px;
+}
+
+/* Hide default HTML checkbox */
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+/* The slider */
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  -webkit-transition: .4s;
+  transition: .4s;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 26px;
+  width: 26px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  -webkit-transition: .4s;
+  transition: .4s;
+}
+
+input:checked + .slider {
+  background-color: #25b42c;
+}
+
+input:focus + .slider {
+  box-shadow: 0 0 1px #2196F3;
+}
+
+input:checked + .slider:before {
+  -webkit-transform: translateX(26px);
+  -ms-transform: translateX(26px);
+  transform: translateX(26px);
+}
+
+/* Rounded sliders */
+.slider.round {
+  border-radius: 34px;
+}
+
+.slider.round:before {
+  border-radius: 50%;
+}
+
+table {
+  width: 400px;
+  height: 100px;
+}
+    </style>
+
+<body>
+  <h1>Управление светом</h1>
+    <div>
+      <table>
+        <tr>
+          <td><label>Холодный белый</label></td>
+        </tr>
+        <tr>
+          <td><label class="switch">
+        <input type="checkbox" id="cold white" onclick="cold_white_toggle()">
+        <span class="slider round"></span>
+      </label></td>
+      <td align="left">
+        <div>
+        <input type="range" id="cold_brightness" name="volume"
+               min="1" max="255" onchange="cold_white_bright()">
+        <label for="volume">Яркость</label>
+        </div>
+      </td>
+        </tr>
+
+        <tr>
+          <td><label>Теплый белый</label></td>
+        </tr>
+        <tr>
+          <td><label class="switch">
+        <input type="checkbox" id="warm white" onclick="warm_white_toggle()">
+        <span class="slider round"></span>
+      </label></td>
+      <td align="left">
+        <div>
+        <input type="range" id="warm_brightness" name="volume"
+               min="1" max="255" onchange="warm_white_bright()">
+        <label for="volume">Яркость</label>
+        </div>
+      </td>
+        </tr>
+
+        <tr>
+          <td><label>Красно-синяя лента</label></td>
+        </tr>
+        <tr>
+          <td><label class="switch">
+        <input type="checkbox" id="red blue" onclick="red_blue_toggle()">
+        <span class="slider round"></span>
+      </label></td>
+      <td align="left">
+        <div>
+        <input type="range" id="red_blue_brightness" name="volume"
+               min="1" max="255" onchange="red_blue_bright()">
+        <label for="volume">Яркость</label>
+        </div>
+      </td>
+        </tr>
+
+        <tr>
+          <td><label>RGB лента</label></td>
+        </tr>
+        <tr>
+          <td><label class="switch">
+        <input type="checkbox" id="rgb line" onclick="rgb_toggle()">
+        <span class="slider round"></span>
+      </label></td>
+      <td align="left">
+        <div>
+        <input type="range" id="rgb_brightness" name="volume"
+               min="1" max="255" onchange="rgb_bright()">
+        <label for="volume">Яркость</label>
+        </div>
+      </td>
+        </tr>
+        <tr>
+          <td><label for="favcolor">Цвет:</label>
+            <input type="color" id="rgbcolor" name="favcolor" value="#ff0000" onchange="rgb_change_color()"><br><br></td>
+        </tr>
+      </table>
+    </div>
+
+    <h1>Управление таймерами</h1>
+    <div>
+      <table><tr>
+        <td>
+          <input type="checkbox" id="timerEnable" name="timerEnable"
+           checked onclick="timerEnableClick()">
+        <label for="timerEnable">Вкл таймер</label>
+        </td>  
+      </tr>
+
+        <tr>
+          <td>
+            <label for="ontime">Время включения:</label>
+            <input type="time" id="ontime" name="ontime"
+                min="00:00" max="23:59" required onchange="onTimerTime()">
+          </td>
+          <td>
+            <label for="offtime">Время выключения:</label>
+            <input type="time" id="offtime" name="offtime"
+                  min="00:00" max="23:59" required onchange="offTimerTime()">
+          </td>
+        </tr>
+
+        <tr>
+          <td>
+            <input type="checkbox" id="timerColdWhite" name="timerColdWhite"
+             checked onclick="timerColdWhiteClick()">
+          <label for="timerColdWhite">Холодный белый</label>
+          </td>  
+        </tr>
+        <tr>
+        <td>  
+          <input type="checkbox" id="timerWarmWhite" name="timerWarmWhite"
+             checked onclick="timerWarmWhiteClick()">
+          <label for="timerWarmWhite">Теплый белый</label>
+        </td>          
+        </tr>
+
+        <tr>
+          <td>
+            <label for="timerTargetBrightness" >Яркость при включении:</label>
+          </td> 
+          <td>
+            <input type="range" id="timerTargetBrightness" name="timerTargetBrightness"
+            min="1" max="255" onchange="timerTargetBrightnessChanged()">
+          </td> 
+        </tr>
+        
+        <tr>
+          <td>
+            <label for="timerSunsetDuration" >Длительность рассвета и заката, мин:</label>
+          </td> 
+          <td>
+            <input type="number" id="timerSunsetDuration" name="timerSunsetDuration"
+            onchange="timerSunsetDurationChanged()">
+          </td> 
+        </tr>
+      </table>
+    </div>
+
+</body>
+<script>
+    var gateway = `ws://${window.location.hostname}/ws`;
+  var websocket;
+  function initWebSocket() {
+    console.log('Trying to open a WebSocket connection...');
+    websocket = new WebSocket(gateway);
+    websocket.onopen    = onOpen;
+    websocket.onclose   = onClose;
+    websocket.onmessage = onMessage; // <-- add this line
+  }
+  function onOpen(event) {
+    console.log('Connection opened');
+  }
+
+  function onClose(event) {
+    console.log('Connection closed');
+    setTimeout(initWebSocket, 2000);
+  }
+  window.addEventListener('load', onLoad);
+  function onLoad(event) {
+    initWebSocket();
+  }
+
+
+  function onMessage(event) {
+    
+    data = JSON.parse(event.data);
+    
+    if ('coldWhiteState' in data) {
+      document.getElementById('cold white').checked = data["coldWhiteState"];
+    } 
+
+    if ('coldWhiteBright' in data) {
+      document.getElementById('cold_brightness').value = data["coldWhiteBright"];
+    } 
+
+    if ('warmWhiteState' in data) {
+      document.getElementById('warm white').checked = data["warmWhiteState"];
+    } 
+
+    if ('warmWhiteBright' in data) {
+      document.getElementById('warm_brightness').value = data['warmWhiteBright'];
+    } 
+
+    if ('redblueState' in data) {
+      document.getElementById('red blue').checked = data['redblueState'];
+    } 
+
+    if ('redblueBright' in data) {
+      document.getElementById('red_blue_brightness').value = data['redblueBright'];
+    } 
+
+    if ('rgbState' in data) {
+      document.getElementById('rgb line').checked = data['rgbState'];
+    } 
+
+    if ('rgbBright' in data) {
+      document.getElementById('rgb_brightness').value = data['rgbBright'];
+    } 
+
+    if ('rgbColor' in data) {
+      document.getElementById('rgbcolor').value = data['rgbColor'];
+    } 
+
+    if ('onTime' in data) {
+      document.getElementById('ontime').value = data['onTime'];
+    } 
+
+    if ('offTime' in data) {
+      document.getElementById('offtime').value = data['offTime'];
+    } 
+
+    if ('timerColdWhite' in data) {
+      document.getElementById('timerColdWhite').checked = data['timerColdWhite'];
+    } 
+
+    if ('timerWarmWhite' in data) {
+      document.getElementById('timerWarmWhite').checked = data['timerWarmWhite'];
+    } 
+
+    if ('timerTargetBrightness' in data) {
+      document.getElementById('timerTargetBrightness').value = data['timerTargetBrightness'];
+    } 
+
+    if ('timerSunsetDuration' in data) {
+      document.getElementById('timerSunsetDuration').value = data['timerSunsetDuration'];
+    } 
+  
+    if ('timerEnable' in data) {
+      document.getElementById('timerEnable').checked = data['timerEnable'];
+    } 
+  }
+
+  function cold_white_toggle() {
+    let state = {
+    coldWhiteState: document.getElementById('cold white').checked
+    };
+
+    let b_json = JSON.stringify(state);
+    websocket.send(b_json);
+  }
+
+  function cold_white_bright() {
+    let state = {
+    coldWhiteBright: document.getElementById('cold_brightness').value
+    };
+
+    let b_json = JSON.stringify(state);
+    websocket.send(b_json);
+  }
+
+  function warm_white_toggle() {
+    let state = {
+    warmWhiteState: document.getElementById('warm white').checked
+    };
+
+    let b_json = JSON.stringify(state);
+    websocket.send(b_json);
+  }
+
+  function warm_white_bright() {
+    let state = {
+    warmWhiteBright: document.getElementById('warm_brightness').value
+    };
+
+    let b_json = JSON.stringify(state);
+    websocket.send(b_json);
+  }
+
+  function red_blue_toggle() {
+    let state = {
+    redblueState: document.getElementById('red blue').checked
+    };
+
+    let b_json = JSON.stringify(state);
+    websocket.send(b_json);
+  }
+
+  function red_blue_bright() {
+    let state = {
+    redblueBright: document.getElementById('red_blue_brightness').value
+    };
+
+    let b_json = JSON.stringify(state);
+    websocket.send(b_json);
+  }
+
+  function rgb_toggle() {
+    let state = {
+    rgbState: document.getElementById('rgb line').checked
+    };
+
+    let b_json = JSON.stringify(state);
+    websocket.send(b_json);
+  }
+
+  function rgb_bright() {
+    let state = {
+    rgbBright: document.getElementById('rgb_brightness').value
+    };
+
+    let b_json = JSON.stringify(state);
+    websocket.send(b_json);
+ }
+
+  function rgb_change_color(){
+    let state = {
+    rgbColor: document.getElementById('rgbcolor').value
+    };
+
+    let b_json = JSON.stringify(state);
+    websocket.send(b_json);
+  }
+
+  function onTimerTime(){
+    let state = {
+    onTime: document.getElementById('ontime').value
+    };
+
+    let b_json = JSON.stringify(state);
+    websocket.send(b_json);
+  }
+
+  function offTimerTime(){
+    let state = {
+    offTime: document.getElementById('offtime').value
+    };
+
+    let b_json = JSON.stringify(state);
+    websocket.send(b_json);
+  }
+
+  function timerColdWhiteClick(){
+    let state = {
+      timerColdWhite: document.getElementById('timerColdWhite').checked
+    };
+
+    let b_json = JSON.stringify(state);
+    websocket.send(b_json);
+  }
+
+  function timerWarmWhiteClick(){
+    let state = {
+      timerWarmWhite: document.getElementById('timerWarmWhite').checked
+    };
+
+    let b_json = JSON.stringify(state);
+    websocket.send(b_json);
+  }
+
+  function timerTargetBrightnessChanged(){
+    let state = {
+      timerTargetBrightness: document.getElementById('timerTargetBrightness').value
+    };
+
+    let b_json = JSON.stringify(state);
+    websocket.send(b_json);
+  }
+
+  function timerSunsetDurationChanged(){
+    let state = {
+      timerSunsetDuration: document.getElementById('timerSunsetDuration').value
+    };
+
+    let b_json = JSON.stringify(state);
+    websocket.send(b_json);
+  }
+
+  function timerEnableClick(){
+    let state = {
+      timerEnable: document.getElementById('timerEnable').checked
+    };
+
+    let b_json = JSON.stringify(state);
+    websocket.send(b_json);
+  }
+</script>
+</html>

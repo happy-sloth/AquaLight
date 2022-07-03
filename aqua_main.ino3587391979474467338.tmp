@@ -1,0 +1,271 @@
+#include <ESP8266WiFi.h>
+#include <WiFiUdp.h>
+#include <ESPAsyncTCP.h>
+#include <ESPAsyncWebServer.h>
+#include <NTPClient.h>
+
+#include "PCF8574.h"
+
+#include <ArduinoJson.h>
+
+#include "FS.h"
+
+#include <Wire.h>
+#include "ESP8266TimerInterrupt.h"
+
+#define NUM_LEDS 60
+#include "FastLED.h"
+#define RGB_LINE_PIN 0
+CRGB leds[NUM_LEDS];
+byte counter;
+
+AsyncWebServer server(80);
+AsyncWebSocket ws("/ws");
+
+const long utcOffsetInSeconds = 3600*5;
+WiFiUDP ntpUDP;
+NTPClient timeClient(ntpUDP, "pool.ntp.org", utcOffsetInSeconds);
+
+
+#define PCF8563address 0x51
+
+/* define pwm pins */
+const int LED_COLD_WHITE = 5,
+          LED_WARM_WHITE = 4,
+          LED_RED_BLUE   = 2;
+
+PCF8574 pcf8574(0x38);
+
+String days[] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday" };
+
+enum
+{
+  TIMER_IDLE = 0,
+  TIMER_INCREMENT_BRIGHTNESS,
+  TIMER_DECREMENT_BRIGHTNESS
+} timer_bright_process;
+
+enum
+{
+  LED_LINE_COLD_WHITE_INDEX = 0,
+  LED_LINE_WARM_WHITE_INDEX,
+  LED_LINE_BLUE_RED_INDEX,
+  LED_LINE_RGB_INDEX,
+
+  NUM_OF_LINES,
+} led_lines;
+
+typedef struct
+{
+  byte second;
+  byte minute;
+  byte hour;
+  byte dayOfWeek;
+  byte dayOfMonth;
+  byte month;
+  byte year;
+} aqua_time_t;
+
+typedef struct
+{
+  uint8_t hours;
+  uint8_t minutes;
+  uint32_t duration_sec;
+  bool cold_line;
+  bool warm_line;
+  uint8_t finish_brightness;
+} timer_param_t;
+
+typedef struct
+{
+  bool power_state;
+  uint8_t brightness;
+} line_state_t;
+
+bool server_start = false;
+ESP8266Timer ITimer;
+aqua_time_t  current_time;
+
+bool ntp_begin = false;
+bool time_is_synchronized = false;
+bool timers_state = true;
+
+uint16_t sec_counter = 0;
+timer_param_t* current_timer = NULL;
+
+
+timer_param_t on_timer = {.hours = 7,
+                          .minutes = 0,
+                          .duration_sec = 300,
+                          .cold_line = true,
+                          .warm_line = false,
+                          .finish_brightness = 100,};
+timer_param_t off_timer = {.hours = 23,
+                          .minutes = 0,
+                          .duration_sec = 300,
+                          .cold_line = true,
+                          .warm_line = false,
+                          .finish_brightness = 0,};
+
+line_state_t lines_states[NUM_OF_LINES] = {{.power_state = true, .brightness = 100},
+  {.power_state = false, .brightness = 100},
+  {.power_state = false, .brightness = 100},
+  {.power_state = false, .brightness = 100}
+};
+
+uint32_t rgb_line_color_code = 16711935;
+
+bool button_backlight_state = true;
+bool alarm_flag = false;
+
+void led_routine(void);
+void start_dimming(uint8_t chan, uint16_t dim_time, uint8_t target_brightness);
+void do_dimming(); 
+
+void button_backlight_routine();
+void button_routine();
+
+void print_time ();
+ICACHE_RAM_ATTR void alarm_interrupt();
+void setPCF8563alarm(uint8_t alarmMinute, uint8_t alarmHour);
+aqua_time_t readPCF8563();
+void setPCF8563(aqua_time_t b_time);
+aqua_time_t unix_to_time (int64_t unix_time);
+void IRAM_ATTR TimerHandler();
+void aqua_timers_routine();
+
+void server_index_handler(AsyncWebServerRequest *request);
+void notifyClients();
+void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type,
+             void *arg, uint8_t *data, size_t len);
+
+
+void setup()
+{
+  Serial.begin(115200);
+  Serial.println();
+  SPIFFS.begin();
+  analogWriteFreq(100);
+
+  WiFi.begin("Tenda_622090", "nedlyatebya");
+  Serial.print("start wifi");
+  pinMode(14, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(14), alarm_interrupt, FALLING);
+
+  Wire.begin(12, 13);
+
+  FastLED.addLeds<TM1804, RGB_LINE_PIN, RBG>(leds, NUM_LEDS).setCorrection( TypicalLEDStrip );
+
+  ITimer.attachInterruptInterval(1, TimerHandler);
+}
+
+void loop()
+{
+  static int counter = 0;
+  /* Network section*/
+  if (WiFi.status() == WL_CONNECTED)
+  {
+    if (server_start)
+    {
+      ws.cleanupClients();      
+    }
+    else
+    {
+      ws.onEvent(onEvent);
+      server.addHandler(&ws);
+      server.on("/", HTTP_GET, server_index_handler);
+      server.begin();
+      server_start = true;      
+    }
+
+    if (!ntp_begin)
+    {
+       timeClient.begin();
+       ntp_begin = true;
+    }
+    else if (!time_is_synchronized)
+    {
+      aqua_time_t b_time;
+      timeClient.update();
+      b_time = unix_to_time(timeClient.getEpochTime());
+      Serial.printf("Get time %d \n", timeClient.getEpochTime());
+      setPCF8563(b_time);
+      time_is_synchronized = true;
+    } 
+  }
+
+  led_routine();
+
+
+  if (button_backlight_state)
+    button_backlight_routine();
+
+  button_routine();
+  
+//  if (counter >= 1000/50)
+//  {
+//    print_time();
+//    counter=0;
+//  }
+//  else
+//    counter++;
+  
+  aqua_timers_routine();
+
+  delay(50);
+}
+
+void aqua_timers_routine()
+{
+
+
+  if (!current_timer)
+  {
+    
+  }
+  
+  if (alarm_flag)
+  {
+    Serial.print("Alarm!");
+    alarm_flag = false;
+    if (current_timer == &on_timer)
+    {
+      inc_dec_brightness_is_in_process = TIMER_INCREMENT_BRIGHTNESS;
+      target_brightness = on_timer.finish_brightness;
+      
+    }
+    else
+    {
+      inc_dec_brightness_is_in_process = TIMER_DECREMENT_BRIGHTNESS;
+      target_brightness = 0;
+    }
+    PCF8563alarmOff();
+  }
+
+  switch(inc_dec_brightness_is_in_process)
+  {
+    case TIMER_IDLE:
+    {
+      sec_counter = 0;
+      break;
+    }
+    case TIMER_INCREMENT_BRIGHTNESS:
+    {
+      
+      
+      break;
+    }
+    case TIMER_DECREMENT_BRIGHTNESS:
+    {
+      
+      break;      
+    }
+  }
+  
+  
+}
+
+void IRAM_ATTR TimerHandler()
+{
+  msec_counter++;
+}
