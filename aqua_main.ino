@@ -190,7 +190,7 @@ void setup()
   SPIFFS.begin();
   analogWriteFreq(100);
 
-  WiFi.begin(/*"Tenda_622090", "nedlyatebya"*/ "TP-LINK_B576", "56963175");
+  WiFi.begin("SSID", "PWD");
   Serial.print("start wifi");
   pinMode(14, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(14), alarm_interrupt, FALLING);
